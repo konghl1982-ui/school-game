@@ -84,6 +84,17 @@ body {
 .game-card p {
   margin: 5px 0 24px;
 }
+.game-card .price-info {
+  margin: -10px 0 22px;
+  padding: 10px 12px;
+  border: 2px dashed var(--ink);
+  border-radius: 12px;
+  background: #ffffffaa;
+  line-height: 1.6;
+}
+.price-info b {
+  color: #e04465;
+}
 .card-buttons {
   display: flex;
   gap: 10px;
@@ -375,6 +386,12 @@ canvas {
   margin-top: 17px;
 }
 @media (max-width: 650px) {
+  .mode-toggle {
+    top: 8px;
+    right: 8px;
+    padding: 8px 10px;
+    font-size: 11px;
+  }
   .app {
     padding: 15px 12px;
   }
@@ -402,5 +419,25 @@ canvas {
   .mini {
     width: 16px;
     height: 16px;
+  }
+}
+.mode-toggle {
+  position: fixed;
+  z-index: 30;
+  top: 22px;
+  right: 22px;
+  background: white;
+  color: var(--ink);
+  box-shadow: 4px 4px 0 var(--yellow);
+}
+body.teacher-mode .mode-toggle {
+  background: var(--yellow);
+}
+@media (max-width: 650px) {
+  .mode-toggle {
+    top: 8px;
+    right: 8px;
+    padding: 8px 10px;
+    font-size: 11px;
   }
 }

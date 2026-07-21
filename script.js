@@ -3,6 +3,65 @@ const $ = (s) => document.querySelector(s),
 const screens = $$(".screen"),
   modal = $("#modal");
 let gameOverActive = false;
+let teacherMode = false;
+const tone = (student, teacher) => (teacherMode ? teacher : student);
+function applyMode() {
+  document.body.classList.toggle("teacher-mode", teacherMode);
+  $("#modeToggle").textContent = teacherMode ? "학생 버전" : "선생님 버전";
+  $("#heroEyebrow").textContent = tone(
+    "우리끼리 게임 한 판",
+    "함께 즐기는 게임입니다",
+  );
+  $("#heroTitle").innerHTML = tone(
+    "블록 & 계단<br><span>도전해봐</span>",
+    "블록 & 계단<br><span>도전해 보세요</span>",
+  );
+  $("#heroText").textContent = tone(
+    "원하는 게임 골라봐",
+    "원하는 게임을 선택해 주세요",
+  );
+  $("#blockCardText").textContent = tone(
+    "5000점 찍기 · 목숨 2개",
+    "목표 5,000점 · 목숨 2개",
+  );
+  $("#stairCardText").textContent = tone(
+    "200계단 찍기 · 무료 부활 1번",
+    "목표 200계단 · 무료 부활 1회",
+  );
+  $("#blockPrice").innerHTML = tone(
+    "한 판 700원<br><b>클리어하면 300원 할인</b>",
+    "이용료는 한 판에 700원입니다.<br><b>클리어 시 300원을 할인해 드립니다.</b>",
+  );
+  $("#stairPrice").innerHTML = tone(
+    "한 판 800원<br><b>클리어하면 400원 할인</b>",
+    "이용료는 한 판에 800원입니다.<br><b>클리어 시 400원을 할인해 드립니다.</b>",
+  );
+  $("#blockStart").textContent = $("#stairStart").textContent = tone(
+    "시작",
+    "시작하기",
+  );
+  $("#blockGoal").textContent = tone("5000점 찍기", "목표 5,000점");
+  $("#stairGoal").textContent = tone("200계단 찍기", "목표 200계단");
+  $("#blockRestart").textContent = $("#stairRestart").textContent = tone(
+    "다시 하기",
+    "다시 시작",
+  );
+  $("#blockGuide").textContent = tone(
+    "밑에 블록 끌어서 판에 놓으면 됨",
+    "아래 블록을 끌어서 판 위에 놓아 주세요",
+  );
+  $("#currentStairLabel").textContent = tone("지금 계단", "현재 계단");
+  $("#turnLabel").textContent = tone("방향 바꾸기", "방향 전환");
+  $("#climbLabel").textContent = tone("올라가기", "올라가기");
+  $("#keyHelp").textContent = tone(
+    "키보드 ← 방향 바꾸기　→ 올라가기",
+    "키보드: ← 방향 전환 · → 올라가기",
+  );
+}
+$("#modeToggle").onclick = () => {
+  teacherMode = !teacherMode;
+  applyMode();
+};
 function show(id) {
   screens.forEach((s) => s.classList.toggle("active", s.id === id));
   closeModal();
@@ -45,10 +104,15 @@ function ranks(game) {
 function showRanking(game) {
   const names = ranks(game);
   openModal(
-    game === "block" ? "블록 블라스트 랭킹" : "무한의 계단 랭킹",
+    game === "block"
+      ? tone("블록 블라스트 깬 사람", "블록 블라스트 클리어 기록")
+      : tone("무한의 계단 깬 사람", "무한의 계단 클리어 기록"),
     names.length
-      ? `<ol class="rank-list">${names.map((n, i) => `<li>${i + 1}. ${safe(n)}</li>`).join("")}</ol>`
-      : "<p>아직 클리어한 사람이 없어요.<br>첫 번째 기록에 도전해 보세요!</p>",
+      ? `<ol class="rank-list">${names.map((n, i) => `<li>${teacherMode ? `${i + 1}.` : `${i + 1}등`} ${safe(n)}</li>`).join("")}</ol>`
+      : tone(
+          "<p>아직 깬 사람 없음<br>너가 도전 ㄱㄱ</p>",
+          "<p>아직 클리어한 기록이 없습니다.<br>첫 기록에 도전해 보세요.</p>",
+        ),
   );
 }
 function safe(t) {
@@ -58,8 +122,8 @@ function safe(t) {
 }
 function cleared(game) {
   openModal(
-    "🎉 목표 달성!",
-    `<div class="confetti">🏆</div><p>축하해요! 랭킹에 이름을 남겨 보세요.</p><form class="name-form" id="nameForm"><input id="winnerName" maxlength="10" required placeholder="이름"><button>등록하기</button></form>`,
+    tone("오 깼네 ㅊㅋㅊㅋ", "🎉 목표를 달성하셨습니다"),
+    `<div class="confetti">🏆</div><p>${tone("랭킹에 이름 남겨봐", "축하합니다. 랭킹에 이름을 남겨 보세요.")}</p><form class="name-form" id="nameForm"><input id="winnerName" maxlength="10" required placeholder="이름"><button>${tone("등록", "등록하기")}</button></form>`,
   );
   setTimeout(() => {
     $("#nameForm").onsubmit = (e) => {
@@ -76,7 +140,7 @@ function cleared(game) {
 function failed(game, msg) {
   openModal(
     "게임 오버",
-    `<p>${msg}</p><div class="result-actions"><button id="again">다시 도전</button><button class="ghost" id="goHome">게임 선택</button></div>`,
+    `<p>${msg}</p><div class="result-actions"><button id="again">${tone("다시 하기", "다시 도전")}</button><button class="ghost" id="goHome">게임 선택</button></div>`,
   );
   gameOverActive = true;
   setTimeout(() => {
@@ -245,7 +309,10 @@ function beginDrag(e, i, cols) {
     const pos = dragCell(ev.clientX, ev.clientY);
     if (pos) placeBlock(pos.r, pos.c);
     else {
-      $("#blockGuide").textContent = "블록을 판 위에 놓아 주세요.";
+      $("#blockGuide").textContent = tone(
+        "판에 놓으면 됨",
+        "블록을 판 위에 놓아 주세요.",
+      );
       selectedPiece = null;
       renderPieces();
     }
@@ -288,14 +355,19 @@ function clearPreview() {
 }
 function placeBlock(r, c) {
   if (selectedPiece === null) {
-    $("#blockGuide").textContent = "먼저 아래 블록을 선택해 주세요.";
+    $("#blockGuide").textContent = tone(
+      "일단 밑에 블록부터 고르면 됨",
+      "먼저 아래 블록을 선택해 주세요.",
+    );
     return;
   }
   const p = currentPieces[selectedPiece];
   if (!fits(p.shape, r, c)) {
     selectedPiece = null;
-    $("#blockGuide").textContent =
-      "그 자리에는 놓을 수 없어요. 다른 곳에 놓아 보세요!";
+    $("#blockGuide").textContent = tone(
+      "이 자리는 못 놓음 딴 데 ㄱㄱ",
+      "이 자리에는 놓을 수 없습니다. 다른 자리에 놓아 주세요.",
+    );
     renderBlock();
     return;
   }
@@ -305,8 +377,15 @@ function placeBlock(r, c) {
   clearLines();
   if (board.every((row) => row.every((v) => !v))) {
     blockScore += 200;
-    $("#blockGuide").textContent = "판을 모두 비웠어요! +200점";
-  } else $("#blockGuide").textContent = "좋아요! +100점";
+    $("#blockGuide").textContent = tone(
+      "판 다 비움 +200점",
+      "판을 모두 비웠습니다. +200점",
+    );
+  } else
+    $("#blockGuide").textContent = tone(
+      "오 성공 +100점",
+      "블록 놓기에 성공했습니다. +100점",
+    );
   selectedPiece = null;
   if (blockScore >= 5000 && !blockWon) {
     blockWon = true;
@@ -328,7 +407,10 @@ function loseBlockLife() {
       () =>
         failed(
           "block",
-          `놓을 자리가 없어 목숨을 모두 사용했어요. 최종 점수는 ${blockScore.toLocaleString()}점이에요.`,
+          tone(
+            `놓을 자리 없어서 목숨 다 씀 최종 ${blockScore.toLocaleString()}점`,
+            `놓을 자리가 없어 목숨을 모두 사용했습니다. 최종 점수는 ${blockScore.toLocaleString()}점입니다.`,
+          ),
         ),
       300,
     );
@@ -338,8 +420,10 @@ function loseBlockLife() {
   selectedPiece = null;
   makePieces();
   renderBlock();
-  $("#blockGuide").textContent =
-    "놓을 자리가 없어 목숨이 1개 줄었어요. 점수는 유지하고 새 판으로 시작합니다.";
+  $("#blockGuide").textContent = tone(
+    "놓을 자리 없어서 목숨 하나 줄음 점수 그대로 새 판 시작",
+    "놓을 자리가 없어 목숨이 1개 줄었습니다. 점수는 유지하고 새 판으로 시작합니다.",
+  );
 }
 function clearLines() {
   const rows = [],
@@ -403,7 +487,13 @@ function stairAction(turn) {
     stairsPlaying = false;
     drawStairs();
     setTimeout(
-      () => handleStairFailure(`${stairScore}계단에서 방향을 잘못 선택했어요.`),
+      () =>
+        handleStairFailure(
+          tone(
+            `${stairScore}계단에서 방향 잘못 누름`,
+            `${stairScore}계단에서 방향을 잘못 선택했습니다.`,
+          ),
+        ),
       180,
     );
     return;
@@ -428,7 +518,12 @@ function updateTimeGauge(now) {
   drawStairs();
   if (timeLeft <= 0) {
     stairsPlaying = false;
-    handleStairFailure(`시간이 끝났어요. ${stairScore}계단까지 올라갔어요.`);
+    handleStairFailure(
+      tone(
+        `시간 끝 ${stairScore}계단까지 올라감`,
+        `시간이 끝났습니다. ${stairScore}계단까지 올라갔습니다.`,
+      ),
+    );
     return;
   }
   gaugeRaf = requestAnimationFrame(updateTimeGauge);
@@ -436,8 +531,8 @@ function updateTimeGauge(now) {
 function handleStairFailure(message) {
   if (!reviveUsed) {
     openModal(
-      "무료 부활 기회!",
-      `<div class="confetti">⚡</div><p>${message}</p><p>한 판에 한 번 <b>무료 부활</b>을 사용할 수 있어요.</p><div class="result-actions"><button id="freeRevive">부활하기</button><button class="ghost" id="giveUp">그만하기</button></div>`,
+      tone("무료 부활 남음", "무료 부활 기회"),
+      `<div class="confetti">⚡</div><p>${message}</p><p>${tone("한 판에 한 번 무료 부활 가능", "한 판에 한 번 무료 부활을 사용할 수 있습니다.")}</p><div class="result-actions"><button id="freeRevive">${tone("부활", "부활하기")}</button><button class="ghost" id="giveUp">${tone("그만하기", "그만하기")}</button></div>`,
     );
     setTimeout(() => {
       $("#freeRevive").onclick = () => {
@@ -451,7 +546,13 @@ function handleStairFailure(message) {
         drawStairs();
       };
       $("#giveUp").onclick = () =>
-        failed("stairs", `${stairScore}계단까지 올라갔어요.`);
+        failed(
+          "stairs",
+          tone(
+            `${stairScore}계단까지 올라감`,
+            `${stairScore}계단까지 올라갔습니다.`,
+          ),
+        );
     }, 0);
     return;
   }
@@ -713,4 +814,5 @@ function roundRect(x, y, w, h, r, fill, stroke) {
 }
 
 startBlock();
+applyMode();
 show("home");
