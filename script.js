@@ -4,6 +4,8 @@ const screens = $$(".screen"),
   modal = $("#modal");
 let gameOverActive = false;
 let teacherMode = false;
+let setActive = false;
+let setBlockCleared = false;
 const tone = (student, teacher) => (teacherMode ? teacher : student);
 function applyMode() {
   document.body.classList.toggle("teacher-mode", teacherMode);
@@ -36,6 +38,16 @@ function applyMode() {
     "한 판 800원<br><b>클리어하면 400원 할인</b>",
     "이용료는 한 판에 800원입니다.<br><b>클리어 시 400원을 할인해 드립니다.</b>",
   );
+  $("#setCardTitle").textContent = tone("두 게임 세트", "두 게임 세트");
+  $("#setCardText").textContent = tone(
+    "블록 먼저 하고 무계까지 도전",
+    "블록 블라스트를 먼저 진행한 후 무한의 계단에 도전합니다",
+  );
+  $("#setPrice").innerHTML = tone(
+    "세트 1200원<br><b>둘 다 깨면 1000원</b>",
+    "세트 이용료는 1,200원입니다.<br><b>두 게임 모두 클리어 시 1,000원으로 할인됩니다.</b>",
+  );
+  $("#setStart").textContent = tone("세트 시작", "세트 시작하기");
   $("#blockStart").textContent = $("#stairStart").textContent = tone(
     "시작",
     "시작하기",
@@ -86,8 +98,10 @@ $$("[data-start]").forEach(
   (b) =>
     (b.onclick = () =>
       b.dataset.start === "block"
-        ? (startBlock(), show("blockGame"))
-        : (startStairs(), show("stairsGame"))),
+        ? ((setActive = false), startBlock(), show("blockGame"))
+        : b.dataset.start === "stairs"
+          ? ((setActive = false), startStairs(), show("stairsGame"))
+          : startSet()),
 );
 $$("[data-restart]").forEach(
   (b) =>
@@ -121,6 +135,15 @@ function safe(t) {
   return d.innerHTML;
 }
 function cleared(game) {
+  if (setActive) {
+    if (game === "block") {
+      setBlockCleared = true;
+      showSetNext(true, tone("블록 클리어", "블록 블라스트를 클리어했습니다"));
+    } else {
+      showSetResult(true);
+    }
+    return;
+  }
   openModal(
     tone("오 깼네 ㅊㅋㅊㅋ", "🎉 목표를 달성하셨습니다"),
     `<div class="confetti">🏆</div><p>${tone("랭킹에 이름 남겨봐", "축하합니다. 랭킹에 이름을 남겨 보세요.")}</p><form class="name-form" id="nameForm"><input id="winnerName" maxlength="10" required placeholder="이름"><button>${tone("등록", "등록하기")}</button></form>`,
@@ -138,6 +161,11 @@ function cleared(game) {
   }, 0);
 }
 function failed(game, msg) {
+  if (setActive) {
+    if (game === "block") showSetNext(false, msg);
+    else showSetResult(false, msg);
+    return;
+  }
   openModal(
     "게임 오버",
     `<p>${msg}</p><div class="result-actions"><button id="again">${tone("다시 하기", "다시 도전")}</button><button class="ghost" id="goHome">게임 선택</button></div>`,
@@ -149,6 +177,55 @@ function failed(game, msg) {
       game === "block" ? startBlock() : startStairs();
     };
     $("#goHome").onclick = () => show("home");
+  }, 0);
+}
+function startSet() {
+  setActive = true;
+  setBlockCleared = false;
+  startBlock();
+  show("blockGame");
+}
+function showSetNext(blockSuccess, message) {
+  setBlockCleared = blockSuccess;
+  openModal(
+    tone("블록 게임 끝", "블록 블라스트 종료"),
+    `<p>${message}</p><p>${tone("이제 무계 시작", "이제 무한의 계단을 진행해 주세요")}</p><div class="result-actions"><button id="nextSetGame">${tone("무계 시작", "무한의 계단 시작")}</button><button class="ghost" id="endSet">${tone("세트 끝내기", "세트 종료")}</button></div>`,
+  );
+  setTimeout(() => {
+    $("#nextSetGame").onclick = () => {
+      closeModal();
+      startStairs();
+      show("stairsGame");
+    };
+    $("#endSet").onclick = () => {
+      setActive = false;
+      show("home");
+    };
+  }, 0);
+}
+function showSetResult(stairSuccess, message = "") {
+  const bothSuccess = setBlockCleared && stairSuccess;
+  const title = tone(
+    bothSuccess ? "둘 다 깸 ㅊㅋㅊㅋ" : "세트 끝",
+    bothSuccess ? "세트 클리어를 축하합니다" : "세트가 종료되었습니다",
+  );
+  const priceText = tone(
+    bothSuccess
+      ? "둘 다 성공해서 1200원에서 1000원 할인"
+      : "하나 이상 실패해서 세트 1200원",
+    bothSuccess
+      ? "두 게임을 모두 클리어하여 1,200원에서 1,000원으로 할인됩니다."
+      : "두 게임 중 하나 이상을 클리어하지 못해 세트 이용료는 1,200원입니다.",
+  );
+  openModal(
+    title,
+    `${message ? `<p>${message}</p>` : ""}<div class="confetti">${bothSuccess ? "🏆" : "🎮"}</div><p><b>${priceText}</b></p><div class="result-actions"><button id="finishSet">${tone("선택 화면", "게임 선택 화면")}</button></div>`,
+  );
+  setTimeout(() => {
+    $("#finishSet").onclick = () => {
+      setActive = false;
+      show("home");
+    };
   }, 0);
 }
 window.addEventListener("keydown", (e) => {

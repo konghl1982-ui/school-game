@@ -74,6 +74,13 @@ body {
 .stair-card {
   background: #fff3b2;
 }
+.set-card {
+  grid-column: 1 / -1;
+  background: linear-gradient(120deg, #dff9ee, #e7eaff);
+}
+.set-card .card-buttons {
+  max-width: 260px;
+}
 .game-icon {
   font-size: 64px;
 }
