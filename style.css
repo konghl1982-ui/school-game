@@ -81,6 +81,17 @@ body {
 .set-card .card-buttons {
   max-width: 260px;
 }
+.set-rules {
+  margin: -8px 0 20px;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--ink);
+  color: white;
+  line-height: 1.7;
+}
+.set-rules b {
+  color: var(--yellow);
+}
 .game-icon {
   font-size: 64px;
 }

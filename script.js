@@ -47,6 +47,10 @@ function applyMode() {
     "세트 1200원<br><b>둘 다 깨면 1000원</b>",
     "세트 이용료는 1,200원입니다.<br><b>두 게임 모두 클리어 시 1,000원으로 할인됩니다.</b>",
   );
+  $("#setRules").innerHTML = tone(
+    "블록 놓기 +100　판 비우기 +200<br>무계 한 계단 +1<br><b>둘 다 깨면 세트 랭킹 등록</b>",
+    "블록 배치 시 +100점　판을 모두 비우면 +200점<br>무한의 계단은 한 계단당 +1점<br><b>두 게임 모두 클리어하면 세트 랭킹에 등록됩니다.</b>",
+  );
   $("#setStart").textContent = tone("세트 시작", "세트 시작하기");
   $("#blockStart").textContent = $("#stairStart").textContent = tone(
     "시작",
