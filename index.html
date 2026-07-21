@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>블록 & 무한계단 챌린지</title>
-    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="style.css?v=8" />
   </head>
   <body>
     <main class="app">
@@ -27,7 +27,7 @@
           <article class="game-card stair-card">
             <div class="game-icon">↗</div>
             <h2>무한의 계단</h2>
-            <p>목표 500계단</p>
+            <p>목표 200계단 · 무료 부활 1회</p>
             <div class="card-buttons">
               <button data-start="stairs">START</button
               ><button class="ghost" data-rank="stairs">RANKING</button>
@@ -56,12 +56,16 @@
       <section id="stairsGame" class="screen game-screen">
         <header class="game-header">
           <button class="home-btn">← 홈</button>
-          <div><b>무한의 계단</b><small>목표 500계단</small></div>
+          <div><b>무한의 계단</b><small>목표 200계단</small></div>
           <button class="restart" data-restart="stairs">다시 시작</button>
         </header>
         <div class="stair-score">
           <span>현재 계단</span><strong id="stairScore">0</strong
-          ><small>/ 500</small>
+          ><small>/ 200</small>
+        </div>
+        <div class="time-gauge" aria-label="남은 시간">
+          <span>TIME</span>
+          <div><i id="timeGaugeFill"></i></div>
         </div>
         <canvas id="stairsCanvas" width="480" height="570"></canvas>
         <div class="stair-controls">
@@ -79,6 +83,6 @@
         </div>
       </div>
     </main>
-    <script src="script.js"></script>
+    <script src="script.js?v=8"></script>
   </body>
 </html>

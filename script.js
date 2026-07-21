@@ -354,6 +354,14 @@ function hasAnyMove() {
 const canvas = $("#stairsCanvas"),
   ctx = canvas.getContext("2d");
 let stairs, playerStep, facing, stairScore, stairsPlaying;
+let visualStep = 0,
+  stairRaf = 0,
+  cameraWorldX = 0,
+  cameraY = 470;
+let timeLeft = 100,
+  gaugeRaf = 0,
+  gaugeLast = 0,
+  reviveUsed = false;
 function startStairs() {
   // 첫 계단은 캐릭터가 처음 바라보는 오른쪽에 고정한다.
   // 따라서 게임 시작 직후에는 방향 전환 없이 바로 올라갈 수 있다.
@@ -361,9 +369,20 @@ function startStairs() {
   for (let i = 2; i < 520; i++)
     stairs.push(stairs[i - 1] + (Math.random() < 0.5 ? -1 : 1));
   playerStep = 0;
+  visualStep = 0;
+  cameraWorldX = 0;
+  cameraY = 470;
+  cancelAnimationFrame(stairRaf);
+  stairRaf = 0;
   facing = 1;
   stairScore = 0;
   stairsPlaying = true;
+  timeLeft = 100;
+  reviveUsed = false;
+  $("#timeGaugeFill").style.transform = "scaleX(1)";
+  cancelAnimationFrame(gaugeRaf);
+  gaugeLast = performance.now();
+  gaugeRaf = requestAnimationFrame(updateTimeGauge);
   $("#stairScore").textContent = 0;
   drawStairs();
 }
@@ -375,7 +394,7 @@ function stairAction(turn) {
     stairsPlaying = false;
     drawStairs();
     setTimeout(
-      () => failed("stairs", `${stairScore}계단까지 올라갔어요.`),
+      () => handleStairFailure(`${stairScore}계단에서 방향을 잘못 눌렀어요.`),
       180,
     );
     return;
@@ -383,12 +402,86 @@ function stairAction(turn) {
   facing = nextFacing;
   playerStep++;
   stairScore++;
+  timeLeft = Math.min(100, timeLeft + 7);
   $("#stairScore").textContent = stairScore;
-  drawStairs();
-  if (stairScore >= 500) {
+  animateStairMove();
+  if (stairScore >= 200) {
     stairsPlaying = false;
     setTimeout(() => cleared("stairs"), 250);
   }
+}
+function updateTimeGauge(now) {
+  if (!stairsPlaying) return;
+  const dt = Math.min(100, now - gaugeLast);
+  gaugeLast = now;
+  timeLeft = Math.max(0, timeLeft - (dt / 10000) * 100);
+  $("#timeGaugeFill").style.transform = `scaleX(${timeLeft / 100})`;
+  drawStairs();
+  if (timeLeft <= 0) {
+    stairsPlaying = false;
+    handleStairFailure(`시간이 끝났어요! ${stairScore}계단까지 올라갔어요.`);
+    return;
+  }
+  gaugeRaf = requestAnimationFrame(updateTimeGauge);
+}
+function handleStairFailure(message) {
+  if (!reviveUsed) {
+    openModal(
+      "무료 부활 기회!",
+      `<div class="confetti">⚡</div><p>${message}</p><p>게임당 한 번 사용할 수 있는 <b>무료 부활</b> 기회예요.</p><div class="result-actions"><button id="freeRevive">무료 부활</button><button class="ghost" id="giveUp">그만하기</button></div>`,
+    );
+    setTimeout(() => {
+      $("#freeRevive").onclick = () => {
+        reviveUsed = true;
+        timeLeft = 60;
+        $("#timeGaugeFill").style.transform = "scaleX(.6)";
+        stairsPlaying = true;
+        gaugeLast = performance.now();
+        closeModal();
+        gaugeRaf = requestAnimationFrame(updateTimeGauge);
+        drawStairs();
+      };
+      $("#giveUp").onclick = () =>
+        failed("stairs", `${stairScore}계단까지 올라갔어요.`);
+    }, 0);
+    return;
+  }
+  failed("stairs", message);
+}
+function animateStairMove() {
+  // 연타해도 애니메이션을 다시 시작하지 않고 최신 위치를 부드럽게 따라간다.
+  if (stairRaf) return;
+  let last = performance.now();
+  const frame = (now) => {
+    const dt = Math.min(40, now - last);
+    last = now;
+    const follow = 1 - Math.exp(-dt / 34);
+    visualStep += (playerStep - visualStep) * follow;
+    const characterWorldX = stairWorldX(visualStep);
+    const cameraFollowX = 1 - Math.exp(-dt / 95);
+    cameraWorldX += (characterWorldX - cameraWorldX) * cameraFollowX;
+    const wantedCameraY = Math.max(470, visualStep * 54 + 250);
+    const cameraFollowY = 1 - Math.exp(-dt / 70);
+    cameraY += (wantedCameraY - cameraY) * cameraFollowY;
+    drawStairs(visualStep, 0);
+    if (
+      Math.abs(playerStep - visualStep) > 0.002 ||
+      Math.abs(characterWorldX - cameraWorldX) > 0.002 ||
+      Math.abs(wantedCameraY - cameraY) > 0.05
+    )
+      stairRaf = requestAnimationFrame(frame);
+    else {
+      visualStep = playerStep;
+      stairRaf = 0;
+      drawStairs(visualStep, 0);
+    }
+  };
+  stairRaf = requestAnimationFrame(frame);
+}
+function stairWorldX(step) {
+  const low = Math.max(0, Math.floor(step));
+  const high = Math.min(stairs.length - 1, Math.ceil(step));
+  return stairs[low] + (stairs[high] - stairs[low]) * (step - low);
 }
 $("#turnBtn").onclick = () => stairAction(true);
 $("#climbBtn").onclick = () => stairAction(false);
@@ -403,7 +496,7 @@ window.addEventListener("keydown", (e) => {
     stairAction(false);
   }
 });
-function drawStairs() {
+function drawStairs(viewStep = visualStep, hop = 0) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   const sky = ctx.createLinearGradient(0, 0, 0, 570);
   sky.addColorStop(0, "#42ade9");
@@ -429,21 +522,52 @@ function drawStairs() {
   }
   ctx.fillStyle = "#72bf54";
   ctx.fillRect(0, 390, 480, 180);
-  const baseY = 470,
-    stepY = 54,
+  // 게임 화면 안쪽에 고정되는 시간 게이지
+  ctx.save();
+  ctx.fillStyle = "#ffffffdd";
+  ctx.strokeStyle = "#18213b";
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.roundRect(54, 18, 372, 38, 14);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = "#18213b";
+  ctx.font = "900 14px Noto Sans KR";
+  ctx.textAlign = "left";
+  ctx.fillText("TIME", 68, 43);
+  ctx.fillStyle = "#d9dde5";
+  ctx.beginPath();
+  ctx.roundRect(116, 29, 294, 16, 8);
+  ctx.fill();
+  const gaugeWidth = Math.max(0, 294 * (timeLeft / 100));
+  if (gaugeWidth > 0) {
+    ctx.fillStyle =
+      timeLeft > 55 ? "#49d98e" : timeLeft > 25 ? "#ffd84d" : "#f04444";
+    ctx.beginPath();
+    ctx.roundRect(116, 29, gaugeWidth, 16, Math.min(8, gaugeWidth / 2));
+    ctx.fill();
+  }
+  ctx.restore();
+  const stepY = 54,
     stepX = 58;
-  const centerX = 240 - stairs[playerStep] * stepX;
+  const viewX = stairWorldX(viewStep);
+  const centerX = 240 - cameraWorldX * stepX;
   for (
-    let i = Math.max(0, playerStep - 2);
-    i < Math.min(stairs.length, playerStep + 9);
+    let i = Math.max(0, Math.floor(viewStep) - 2);
+    i < Math.min(stairs.length, Math.ceil(viewStep) + 9);
     i++
   ) {
     const x = centerX + stairs[i] * stepX,
-      y = baseY - (i - playerStep) * stepY;
+      y = cameraY - i * stepY;
     // 입체적인 돌계단: 윗면, 앞면, 옆면을 따로 그린다.
     ctx.strokeStyle = "#3d4650";
     ctx.lineWidth = 3;
-    ctx.fillStyle = i === playerStep ? "#d9c76d" : "#aeb5b7";
+    ctx.fillStyle =
+      i === playerStep
+        ? "#d9c76d"
+        : i === playerStep + 1
+          ? "#8fe0ef"
+          : "#aeb5b7";
     ctx.beginPath();
     ctx.moveTo(x - 52, y);
     ctx.lineTo(x + 38, y);
@@ -452,7 +576,12 @@ function drawStairs() {
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
-    ctx.fillStyle = i === playerStep ? "#a89445" : "#747d80";
+    ctx.fillStyle =
+      i === playerStep
+        ? "#a89445"
+        : i === playerStep + 1
+          ? "#4e9daf"
+          : "#747d80";
     ctx.beginPath();
     ctx.moveTo(x - 38, y + 11);
     ctx.lineTo(x + 52, y + 11);
@@ -470,8 +599,9 @@ function drawStairs() {
     ctx.lineTo(x + 17, y + 33);
     ctx.stroke();
   }
-  const px = 240,
-    py = baseY - 45;
+  const climbHop = Math.sin((viewStep % 1) * Math.PI) * 12;
+  const px = 240 + (viewX - cameraWorldX) * stepX,
+    py = cameraY - viewStep * stepY - 45 - hop - climbHop;
   ctx.save();
   ctx.translate(px, py);
   ctx.scale(facing, 1);
@@ -574,5 +704,4 @@ function roundRect(x, y, w, h, r, fill, stroke) {
 }
 
 startBlock();
-startStairs();
 show("home");
