@@ -3,34 +3,34 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>블록 & 무한계단 챌린지</title>
-    <link rel="stylesheet" href="style.css?v=8" />
+    <title>블블 & 무계임 ㅋㅋ</title>
+    <link rel="stylesheet" href="style.css?v=9" />
   </head>
   <body>
     <main class="app">
       <section id="home" class="screen active">
         <div class="hero">
-          <p class="eyebrow">SCHOOL GAME CHALLENGE</p>
-          <h1>블록 & 계단<br /><span>챌린지</span></h1>
-          <p>게임을 고르고 목표 점수에 도전해 보세요!</p>
+          <p class="eyebrow">우리끼리 겜 ㄱㄱ</p>
+          <h1>블블 & 무계<br /><span>골라봐ㅋㅋ</span></h1>
+          <p>둘 중에 하고 싶은 거 ㄱㄱ</p>
         </div>
         <div class="game-cards">
           <article class="game-card block-card">
             <div class="game-icon">▦</div>
-            <h2>블록 블라스트</h2>
-            <p>목표 5,000점 · 목숨 2개</p>
+            <h2>블록블라스트임</h2>
+            <p>5,000점 찍으면 됨 · 목숨 2개임</p>
             <div class="card-buttons">
-              <button data-start="block">START</button
-              ><button class="ghost" data-rank="block">RANKING</button>
+              <button data-start="block">시작 ㄱㄱ</button
+              ><button class="ghost" data-rank="block">랭킹 보기</button>
             </div>
           </article>
           <article class="game-card stair-card">
             <div class="game-icon">↗</div>
-            <h2>무한의 계단</h2>
-            <p>목표 200계단 · 무료 부활 1회</p>
+            <h2>무계임 ㅋㅋ</h2>
+            <p>200계단 찍으면 됨 · 부활 1번 있음</p>
             <div class="card-buttons">
-              <button data-start="stairs">START</button
-              ><button class="ghost" data-rank="stairs">RANKING</button>
+              <button data-start="stairs">시작 ㄱㄱ</button
+              ><button class="ghost" data-rank="stairs">랭킹 보기</button>
             </div>
           </article>
         </div>
@@ -38,29 +38,27 @@
 
       <section id="blockGame" class="screen game-screen">
         <header class="game-header">
-          <button class="home-btn">← 홈</button>
-          <div><b>블록 블라스트</b><small>목표 5,000점</small></div>
-          <button class="restart" data-restart="block">다시 시작</button>
+          <button class="home-btn">← 나가기</button>
+          <div><b>블록블라스트임</b><small>5,000점 ㄱㄱ</small></div>
+          <button class="restart" data-restart="block">다시 ㄱ</button>
         </header>
         <div class="stats">
           <div><span>점수</span><strong id="blockScore">0</strong></div>
           <div><span>목숨</span><strong id="blockLives">❤️❤️</strong></div>
         </div>
         <div id="blockBoard" class="block-board" aria-label="블록 게임판"></div>
-        <p id="blockGuide" class="guide">
-          아래 블록을 끌어서 판 위에 놓으세요.
-        </p>
+        <p id="blockGuide" class="guide">밑에 블록 끌어서 판에 놓으면 됨</p>
         <div id="pieces" class="pieces"></div>
       </section>
 
       <section id="stairsGame" class="screen game-screen">
         <header class="game-header">
-          <button class="home-btn">← 홈</button>
-          <div><b>무한의 계단</b><small>목표 200계단</small></div>
-          <button class="restart" data-restart="stairs">다시 시작</button>
+          <button class="home-btn">← 나가기</button>
+          <div><b>무계임 ㅋㅋ</b><small>200계단 ㄱㄱ</small></div>
+          <button class="restart" data-restart="stairs">다시 ㄱ</button>
         </header>
         <div class="stair-score">
-          <span>현재 계단</span><strong id="stairScore">0</strong
+          <span>지금 몇 층?</span><strong id="stairScore">0</strong
           ><small>/ 200</small>
         </div>
         <div class="time-gauge" aria-label="남은 시간">
@@ -69,10 +67,10 @@
         </div>
         <canvas id="stairsCanvas" width="480" height="570"></canvas>
         <div class="stair-controls">
-          <button id="turnBtn">↶<span>방향 전환</span></button
-          ><button id="climbBtn">↑<span>올라가기</span></button>
+          <button id="turnBtn">↶<span>반대로 틀기</span></button
+          ><button id="climbBtn">↑<span>그냥 올라가기</span></button>
         </div>
-        <p class="key-help">키보드: ← 방향 전환 · → 올라가기</p>
+        <p class="key-help">키보드는 ← 반대로 · → 그냥 올라감</p>
       </section>
 
       <div id="modal" class="modal" aria-hidden="true">
@@ -83,6 +81,6 @@
         </div>
       </div>
     </main>
-    <script src="script.js?v=8"></script>
+    <script src="script.js?v=9"></script>
   </body>
 </html>

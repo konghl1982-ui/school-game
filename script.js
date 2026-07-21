@@ -43,10 +43,10 @@ function ranks(game) {
 function showRanking(game) {
   const names = ranks(game);
   openModal(
-    game === "block" ? "블록 블라스트 랭킹" : "무한의 계단 랭킹",
+    game === "block" ? "블블 깬 애들임" : "무계 깬 애들임",
     names.length
       ? `<ol class="rank-list">${names.map((n, i) => `<li>${i + 1}. ${safe(n)}</li>`).join("")}</ol>`
-      : "<p>아직 클리어한 사람이 없어요.<br>첫 번째 주인공이 되어 보세요!</p>",
+      : "<p>아직 깬 애 없음ㅋㅋ<br>니가 1빠 해봐</p>",
   );
 }
 function safe(t) {
@@ -56,8 +56,8 @@ function safe(t) {
 }
 function cleared(game) {
   openModal(
-    "🎉 목표 달성!",
-    `<div class="confetti">🏆</div><p>축하해요! 클리어 랭킹에 이름을 남겨 보세요.</p><form class="name-form" id="nameForm"><input id="winnerName" maxlength="10" required placeholder="이름"><button>등록</button></form>`,
+    "🎉 와 이걸 깼네ㅋㅋ",
+    `<div class="confetti">🏆</div><p>클리어했음! 랭킹에 이름 박고 가셈</p><form class="name-form" id="nameForm"><input id="winnerName" maxlength="10" required placeholder="이름 ㄱ"><button>등록 ㄱ</button></form>`,
   );
   setTimeout(() => {
     $("#nameForm").onsubmit = (e) => {
@@ -73,8 +73,8 @@ function cleared(game) {
 }
 function failed(game, msg) {
   openModal(
-    "게임 오버",
-    `<p>${msg}</p><div class="result-actions"><button id="again">다시 도전</button><button class="ghost" id="goHome">홈으로</button></div>`,
+    "죽음ㅋㅋ",
+    `<p>${msg}</p><div class="result-actions"><button id="again">다시 ㄱ</button><button class="ghost" id="goHome">나갈래</button></div>`,
   );
   setTimeout(() => {
     $("#again").onclick = () => {
@@ -236,7 +236,7 @@ function beginDrag(e, i, cols) {
     const pos = dragCell(ev.clientX, ev.clientY);
     if (pos) placeBlock(pos.r, pos.c);
     else {
-      $("#blockGuide").textContent = "블록을 판 위에 놓아 주세요.";
+      $("#blockGuide").textContent = "판에다 놓으셈ㅋㅋ";
       selectedPiece = null;
       renderPieces();
     }
@@ -279,14 +279,13 @@ function clearPreview() {
 }
 function placeBlock(r, c) {
   if (selectedPiece === null) {
-    $("#blockGuide").textContent = "먼저 아래 블록 하나를 골라 주세요!";
+    $("#blockGuide").textContent = "일단 밑에 블록부터 고르셈";
     return;
   }
   const p = currentPieces[selectedPiece];
   if (!fits(p.shape, r, c)) {
     selectedPiece = null;
-    $("#blockGuide").textContent =
-      "여기에는 놓을 수 없어요. 다른 자리에 다시 끌어 보세요!";
+    $("#blockGuide").textContent = "거긴 못 둠ㅋㅋ 다른 데 놔";
     renderBlock();
     return;
   }
@@ -296,8 +295,8 @@ function placeBlock(r, c) {
   clearLines();
   if (board.every((row) => row.every((v) => !v))) {
     blockScore += 200;
-    $("#blockGuide").textContent = "판을 모두 비웠어요! +200점 ✨";
-  } else $("#blockGuide").textContent = "블록 놓기 성공! +100점";
+    $("#blockGuide").textContent = "판 싹 비움ㅋㅋ +200점";
+  } else $("#blockGuide").textContent = "오 잘 놨네 +100점";
   selectedPiece = null;
   if (blockScore >= 5000 && !blockWon) {
     blockWon = true;
@@ -319,7 +318,7 @@ function loseBlockLife() {
       () =>
         failed(
           "block",
-          `놓을 칸이 없어 목숨을 모두 사용했어요. 최종 점수는 ${blockScore.toLocaleString()}점이에요.`,
+          `놓을 데 없어서 목숨 다 씀ㅋㅋ 최종 ${blockScore.toLocaleString()}점임`,
         ),
       300,
     );
@@ -330,7 +329,7 @@ function loseBlockLife() {
   makePieces();
   renderBlock();
   $("#blockGuide").textContent =
-    "놓을 칸이 없어 목숨 -1! 점수를 유지하고 새 판으로 시작해요.";
+    "놓을 데 없어서 목숨 -1임. 점수 그대로 새 판 ㄱ";
 }
 function clearLines() {
   const rows = [],
@@ -394,7 +393,7 @@ function stairAction(turn) {
     stairsPlaying = false;
     drawStairs();
     setTimeout(
-      () => handleStairFailure(`${stairScore}계단에서 방향을 잘못 눌렀어요.`),
+      () => handleStairFailure(`${stairScore}계단에서 잘못 누름ㅋㅋ`),
       180,
     );
     return;
@@ -419,7 +418,7 @@ function updateTimeGauge(now) {
   drawStairs();
   if (timeLeft <= 0) {
     stairsPlaying = false;
-    handleStairFailure(`시간이 끝났어요! ${stairScore}계단까지 올라갔어요.`);
+    handleStairFailure(`시간 끝남ㅋㅋ ${stairScore}계단까지 감`);
     return;
   }
   gaugeRaf = requestAnimationFrame(updateTimeGauge);
@@ -427,8 +426,8 @@ function updateTimeGauge(now) {
 function handleStairFailure(message) {
   if (!reviveUsed) {
     openModal(
-      "무료 부활 기회!",
-      `<div class="confetti">⚡</div><p>${message}</p><p>게임당 한 번 사용할 수 있는 <b>무료 부활</b> 기회예요.</p><div class="result-actions"><button id="freeRevive">무료 부활</button><button class="ghost" id="giveUp">그만하기</button></div>`,
+      "아직 부활 있음ㅋㅋ",
+      `<div class="confetti">⚡</div><p>${message}</p><p>한 판에 한 번 <b>무료 부활</b> 가능함</p><div class="result-actions"><button id="freeRevive">부활 ㄱ</button><button class="ghost" id="giveUp">걍 포기</button></div>`,
     );
     setTimeout(() => {
       $("#freeRevive").onclick = () => {
@@ -442,7 +441,7 @@ function handleStairFailure(message) {
         drawStairs();
       };
       $("#giveUp").onclick = () =>
-        failed("stairs", `${stairScore}계단까지 올라갔어요.`);
+        failed("stairs", `${stairScore}계단까지 갔음`);
     }, 0);
     return;
   }
@@ -694,7 +693,7 @@ function drawStairs(viewStep = visualStep, hop = 0) {
   ctx.fillStyle = "#18213b";
   ctx.font = "900 16px Noto Sans KR";
   ctx.textAlign = "center";
-  ctx.fillText(facing === 1 ? "오른쪽 보는 중 →" : "← 왼쪽 보는 중", 240, 535);
+  ctx.fillText(facing === 1 ? "지금 오른쪽 봄 →" : "← 지금 왼쪽 봄", 240, 535);
 }
 function roundRect(x, y, w, h, r, fill, stroke) {
   ctx.beginPath();
