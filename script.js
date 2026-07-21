@@ -95,31 +95,44 @@ function closeModal() {
   modal.classList.remove("show");
   modal.setAttribute("aria-hidden", "true");
 }
-$("#closeModal").onclick = async () => {
+$("#closeModal").onclick = () => {
   if (!rankingOpenGame) {
     closeModal();
     return;
   }
   const game = rankingOpenGame;
-  const pin = prompt(
-    tone("관리자 비밀번호 입력", "관리자 비밀번호를 입력해 주세요."),
+  openModal(
+    tone("관리자 확인", "관리자 확인"),
+    `<p>${tone("비밀번호 입력", "관리자 비밀번호를 입력해 주세요.")}</p><form class="name-form" id="resetRankForm"><input id="resetPin" type="password" inputmode="numeric" maxlength="4" required placeholder="비밀번호"><button>${tone("초기화", "초기화하기")}</button></form><p id="resetError"></p><div class="result-actions"><button class="ghost" id="cancelReset">${tone("취소", "취소")}</button></div>`,
   );
-  if (pin === null) return;
-  try {
-    const cleared = await resetOnlineRanking(game, pin);
-    if (!cleared) {
-      alert(tone("비밀번호 틀림", "비밀번호가 올바르지 않습니다."));
-      return;
-    }
-    await showRanking(game);
-  } catch {
-    alert(
-      tone(
-        "초기화 실패 잠시 뒤 다시 해봐",
-        "랭킹 초기화에 실패했습니다. 잠시 후 다시 시도해 주세요.",
-      ),
-    );
-  }
+  setTimeout(() => {
+    $("#resetPin").focus();
+    $("#cancelReset").onclick = () => showRanking(game);
+    $("#resetRankForm").onsubmit = async (e) => {
+      e.preventDefault();
+      const pin = $("#resetPin").value;
+      $("#resetError").textContent = tone(
+        "확인 중",
+        "비밀번호를 확인하고 있습니다.",
+      );
+      try {
+        const cleared = await resetOnlineRanking(game, pin);
+        if (!cleared) {
+          $("#resetError").textContent = tone(
+            "비밀번호 틀림",
+            "비밀번호가 올바르지 않습니다.",
+          );
+          return;
+        }
+        await showRanking(game);
+      } catch {
+        $("#resetError").textContent = tone(
+          "초기화 실패 잠시 뒤 다시 해봐",
+          "랭킹 초기화에 실패했습니다. 잠시 후 다시 시도해 주세요.",
+        );
+      }
+    };
+  }, 0);
 };
 modal.onclick = (e) => {
   if (e.target === modal) closeModal();
