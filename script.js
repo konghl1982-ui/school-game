@@ -6,6 +6,7 @@ let gameOverActive = false;
 let teacherMode = false;
 let setActive = false;
 let setBlockCleared = false;
+let rankingOpenGame = null;
 const tone = (student, teacher) => (teacherMode ? teacher : student);
 function applyMode() {
   document.body.classList.toggle("teacher-mode", teacherMode);
@@ -83,6 +84,7 @@ function show(id) {
   closeModal();
 }
 function openModal(title, html) {
+  rankingOpenGame = null;
   $("#modalTitle").textContent = title;
   $("#modalBody").innerHTML = html;
   modal.classList.add("show");
@@ -93,7 +95,32 @@ function closeModal() {
   modal.classList.remove("show");
   modal.setAttribute("aria-hidden", "true");
 }
-$("#closeModal").onclick = closeModal;
+$("#closeModal").onclick = async () => {
+  if (!rankingOpenGame) {
+    closeModal();
+    return;
+  }
+  const game = rankingOpenGame;
+  const pin = prompt(
+    tone("관리자 비밀번호 입력", "관리자 비밀번호를 입력해 주세요."),
+  );
+  if (pin === null) return;
+  try {
+    const cleared = await resetOnlineRanking(game, pin);
+    if (!cleared) {
+      alert(tone("비밀번호 틀림", "비밀번호가 올바르지 않습니다."));
+      return;
+    }
+    await showRanking(game);
+  } catch {
+    alert(
+      tone(
+        "초기화 실패 잠시 뒤 다시 해봐",
+        "랭킹 초기화에 실패했습니다. 잠시 후 다시 시도해 주세요.",
+      ),
+    );
+  }
+};
 modal.onclick = (e) => {
   if (e.target === modal) closeModal();
 };
@@ -143,6 +170,18 @@ async function saveRank(game, name) {
   });
   if (!response.ok) throw new Error("rank save failed");
 }
+async function resetOnlineRanking(game, pin) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/reset_rankings`, {
+    method: "POST",
+    headers: {
+      ...SUPABASE_HEADERS,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ p_game: game, p_pin: pin }),
+  });
+  if (!response.ok) throw new Error("rank reset failed");
+  return await response.json();
+}
 async function showRanking(game) {
   const title =
     game === "block"
@@ -154,6 +193,7 @@ async function showRanking(game) {
     title,
     `<p>${tone("랭킹 불러오는 중", "랭킹을 불러오는 중입니다.")}</p>`,
   );
+  rankingOpenGame = game;
   let names;
   try {
     names = await fetchRanks(game);
@@ -162,6 +202,7 @@ async function showRanking(game) {
       title,
       `<p>${tone("랭킹 연결 실패 잠시 뒤 다시 해봐", "랭킹을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.")}</p>`,
     );
+    rankingOpenGame = game;
     return;
   }
   openModal(
@@ -173,6 +214,7 @@ async function showRanking(game) {
           "<p>아직 클리어한 기록이 없습니다.<br>첫 기록에 도전해 보세요.</p>",
         ),
   );
+  rankingOpenGame = game;
 }
 function safe(t) {
   const d = document.createElement("div");
