@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>블록 & 무한계단 챌린지</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main class="app">
+      <section id="home" class="screen active">
+        <div class="hero">
+          <p class="eyebrow">SCHOOL GAME CHALLENGE</p>
+          <h1>블록 & 계단<br /><span>챌린지</span></h1>
+          <p>게임을 고르고 목표 점수에 도전해 보세요!</p>
+        </div>
+        <div class="game-cards">
+          <article class="game-card block-card">
+            <div class="game-icon">▦</div>
+            <h2>블록 블라스트</h2>
+            <p>목표 5,000점 · 목숨 2개</p>
+            <div class="card-buttons">
+              <button data-start="block">START</button
+              ><button class="ghost" data-rank="block">RANKING</button>
+            </div>
+          </article>
+          <article class="game-card stair-card">
+            <div class="game-icon">↗</div>
+            <h2>무한의 계단</h2>
+            <p>목표 500계단</p>
+            <div class="card-buttons">
+              <button data-start="stairs">START</button
+              ><button class="ghost" data-rank="stairs">RANKING</button>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section id="blockGame" class="screen game-screen">
+        <header class="game-header">
+          <button class="home-btn">← 홈</button>
+          <div><b>블록 블라스트</b><small>목표 5,000점</small></div>
+          <button class="restart" data-restart="block">다시 시작</button>
+        </header>
+        <div class="stats">
+          <div><span>점수</span><strong id="blockScore">0</strong></div>
+          <div><span>목숨</span><strong id="blockLives">❤️❤️</strong></div>
+        </div>
+        <div id="blockBoard" class="block-board" aria-label="블록 게임판"></div>
+        <p id="blockGuide" class="guide">
+          아래 블록을 끌어서 판 위에 놓으세요.
+        </p>
+        <div id="pieces" class="pieces"></div>
+      </section>
+
+      <section id="stairsGame" class="screen game-screen">
+        <header class="game-header">
+          <button class="home-btn">← 홈</button>
+          <div><b>무한의 계단</b><small>목표 500계단</small></div>
+          <button class="restart" data-restart="stairs">다시 시작</button>
+        </header>
+        <div class="stair-score">
+          <span>현재 계단</span><strong id="stairScore">0</strong
+          ><small>/ 500</small>
+        </div>
+        <canvas id="stairsCanvas" width="480" height="570"></canvas>
+        <div class="stair-controls">
+          <button id="turnBtn">↶<span>방향 전환</span></button
+          ><button id="climbBtn">↑<span>올라가기</span></button>
+        </div>
+        <p class="key-help">키보드: ← 방향 전환 · → 올라가기</p>
+      </section>
+
+      <div id="modal" class="modal" aria-hidden="true">
+        <div class="modal-box">
+          <button id="closeModal" class="close">×</button>
+          <h2 id="modalTitle"></h2>
+          <div id="modalBody"></div>
+        </div>
+      </div>
+    </main>
+    <script src="script.js"></script>
+  </body>
+</html>

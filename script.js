@@ -1,0 +1,576 @@
+const $ = (s) => document.querySelector(s),
+  $$ = (s) => [...document.querySelectorAll(s)];
+const screens = $$(".screen"),
+  modal = $("#modal");
+function show(id) {
+  screens.forEach((s) => s.classList.toggle("active", s.id === id));
+  closeModal();
+}
+function openModal(title, html) {
+  $("#modalTitle").textContent = title;
+  $("#modalBody").innerHTML = html;
+  modal.classList.add("show");
+  modal.setAttribute("aria-hidden", "false");
+}
+function closeModal() {
+  modal.classList.remove("show");
+  modal.setAttribute("aria-hidden", "true");
+}
+$("#closeModal").onclick = closeModal;
+modal.onclick = (e) => {
+  if (e.target === modal) closeModal();
+};
+$$(".home-btn").forEach((b) => (b.onclick = () => show("home")));
+$$("[data-start]").forEach(
+  (b) =>
+    (b.onclick = () =>
+      b.dataset.start === "block"
+        ? (startBlock(), show("blockGame"))
+        : (startStairs(), show("stairsGame"))),
+);
+$$("[data-restart]").forEach(
+  (b) =>
+    (b.onclick = () =>
+      b.dataset.restart === "block" ? startBlock() : startStairs()),
+);
+$$("[data-rank]").forEach(
+  (b) => (b.onclick = () => showRanking(b.dataset.rank)),
+);
+
+function ranks(game) {
+  return JSON.parse(localStorage.getItem("schoolRanks_" + game) || "[]");
+}
+function showRanking(game) {
+  const names = ranks(game);
+  openModal(
+    game === "block" ? "블록 블라스트 랭킹" : "무한의 계단 랭킹",
+    names.length
+      ? `<ol class="rank-list">${names.map((n, i) => `<li>${i + 1}. ${safe(n)}</li>`).join("")}</ol>`
+      : "<p>아직 클리어한 사람이 없어요.<br>첫 번째 주인공이 되어 보세요!</p>",
+  );
+}
+function safe(t) {
+  const d = document.createElement("div");
+  d.textContent = t;
+  return d.innerHTML;
+}
+function cleared(game) {
+  openModal(
+    "🎉 목표 달성!",
+    `<div class="confetti">🏆</div><p>축하해요! 클리어 랭킹에 이름을 남겨 보세요.</p><form class="name-form" id="nameForm"><input id="winnerName" maxlength="10" required placeholder="이름"><button>등록</button></form>`,
+  );
+  setTimeout(() => {
+    $("#nameForm").onsubmit = (e) => {
+      e.preventDefault();
+      const name = $("#winnerName").value.trim();
+      if (!name) return;
+      const list = ranks(game);
+      list.push(name);
+      localStorage.setItem("schoolRanks_" + game, JSON.stringify(list));
+      showRanking(game);
+    };
+  }, 0);
+}
+function failed(game, msg) {
+  openModal(
+    "게임 오버",
+    `<p>${msg}</p><div class="result-actions"><button id="again">다시 도전</button><button class="ghost" id="goHome">홈으로</button></div>`,
+  );
+  setTimeout(() => {
+    $("#again").onclick = () => {
+      closeModal();
+      game === "block" ? startBlock() : startStairs();
+    };
+    $("#goHome").onclick = () => show("home");
+  }, 0);
+}
+
+// BLOCK GAME
+const shapes = [
+  [[0, 0]],
+  [
+    [0, 0],
+    [0, 1],
+  ],
+  [
+    [0, 0],
+    [1, 0],
+  ],
+  [
+    [0, 0],
+    [0, 1],
+    [0, 2],
+  ],
+  [
+    [0, 0],
+    [1, 0],
+    [2, 0],
+  ],
+  [
+    [0, 0],
+    [0, 1],
+    [1, 0],
+    [1, 1],
+  ],
+  [
+    [0, 0],
+    [1, 0],
+    [1, 1],
+  ],
+  [
+    [0, 1],
+    [1, 0],
+    [1, 1],
+  ],
+  [
+    [0, 0],
+    [0, 1],
+    [1, 1],
+  ],
+  [
+    [0, 0],
+    [1, 0],
+    [2, 0],
+    [2, 1],
+  ],
+  [
+    [0, 0],
+    [0, 1],
+    [0, 2],
+    [0, 3],
+  ],
+  [
+    [0, 0],
+    [1, 0],
+    [2, 0],
+    [3, 0],
+  ],
+];
+let board, blockScore, lives, currentPieces, selectedPiece, blockWon;
+function startBlock() {
+  board = Array.from({ length: 8 }, () => Array(8).fill(0));
+  blockScore = 0;
+  lives = 2;
+  selectedPiece = null;
+  blockWon = false;
+  makePieces();
+  renderBlock();
+}
+function makePieces() {
+  currentPieces = Array.from({ length: 3 }, () => ({
+    shape: shapes[Math.floor(Math.random() * shapes.length)],
+    used: false,
+    color: ["#5267ff", "#ff6e91", "#46d7ac", "#ffad47"][
+      Math.floor(Math.random() * 4)
+    ],
+  }));
+}
+function renderBlock() {
+  const el = $("#blockBoard");
+  el.innerHTML = "";
+  board.forEach((row, r) =>
+    row.forEach((v, c) => {
+      const cell = document.createElement("div");
+      cell.className = "cell" + (v ? " filled" : "");
+      if (v) cell.style.background = v;
+      cell.onmouseenter = () => preview(r, c);
+      cell.onmouseleave = clearPreview;
+      cell.onclick = () => placeBlock(r, c);
+      el.appendChild(cell);
+    }),
+  );
+  $("#blockScore").textContent = blockScore.toLocaleString();
+  $("#blockLives").textContent = "❤️".repeat(lives) + "🖤".repeat(2 - lives);
+  renderPieces();
+}
+function renderPieces() {
+  const box = $("#pieces");
+  box.innerHTML = "";
+  currentPieces.forEach((p, i) => {
+    if (p.used) return;
+    const maxR = Math.max(...p.shape.map((x) => x[0])),
+      maxC = Math.max(...p.shape.map((x) => x[1]));
+    const el = document.createElement("div");
+    el.className = "piece" + (selectedPiece === i ? " selected" : "");
+    el.style.gridTemplateColumns = `repeat(${maxC + 1},20px)`;
+    for (let r = 0; r <= maxR; r++)
+      for (let c = 0; c <= maxC; c++) {
+        const m = document.createElement("i");
+        m.className =
+          "mini" + (p.shape.some((x) => x[0] === r && x[1] === c) ? " on" : "");
+        if (m.classList.contains("on")) m.style.background = p.color;
+        el.appendChild(m);
+      }
+    el.onpointerdown = (e) => beginDrag(e, i, maxC + 1);
+    box.appendChild(el);
+  });
+}
+function beginDrag(e, i, cols) {
+  e.preventDefault();
+  selectedPiece = i;
+  const p = currentPieces[i];
+  const ghost = document.createElement("div");
+  ghost.className = "drag-ghost";
+  ghost.style.gridTemplateColumns = `repeat(${cols},28px)`;
+  const maxR = Math.max(...p.shape.map((x) => x[0]));
+  const maxC = Math.max(...p.shape.map((x) => x[1]));
+  for (let r = 0; r <= maxR; r++)
+    for (let c = 0; c <= maxC; c++) {
+      const m = document.createElement("i");
+      m.className =
+        "mini" + (p.shape.some((x) => x[0] === r && x[1] === c) ? " on" : "");
+      if (m.classList.contains("on")) m.style.background = p.color;
+      ghost.appendChild(m);
+    }
+  document.body.appendChild(ghost);
+  const move = (ev) => {
+    ghost.style.left = ev.clientX + "px";
+    ghost.style.top = ev.clientY + "px";
+    dragPreview(ev.clientX, ev.clientY);
+  };
+  const up = (ev) => {
+    window.removeEventListener("pointermove", move);
+    window.removeEventListener("pointerup", up);
+    ghost.remove();
+    clearPreview();
+    const pos = dragCell(ev.clientX, ev.clientY);
+    if (pos) placeBlock(pos.r, pos.c);
+    else {
+      $("#blockGuide").textContent = "블록을 판 위에 놓아 주세요.";
+      selectedPiece = null;
+      renderPieces();
+    }
+  };
+  move(e);
+  window.addEventListener("pointermove", move);
+  window.addEventListener("pointerup", up);
+}
+function dragCell(x, y) {
+  const rect = $("#blockBoard").getBoundingClientRect();
+  if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom)
+    return null;
+  const size = rect.width / 8;
+  return {
+    r: Math.max(0, Math.min(7, Math.floor((y - rect.top) / size))),
+    c: Math.max(0, Math.min(7, Math.floor((x - rect.left) / size))),
+  };
+}
+function dragPreview(x, y) {
+  clearPreview();
+  const pos = dragCell(x, y);
+  if (pos) preview(pos.r, pos.c);
+}
+function fits(shape, r, c) {
+  return shape.every(
+    ([dr, dc]) => r + dr < 8 && c + dc < 8 && !board[r + dr][c + dc],
+  );
+}
+function preview(r, c) {
+  if (selectedPiece === null) return;
+  const p = currentPieces[selectedPiece];
+  const ok = fits(p.shape, r, c);
+  p.shape.forEach(([dr, dc]) => {
+    const cell = $("#blockBoard").children[(r + dr) * 8 + c + dc];
+    if (cell) cell.classList.add(ok ? "preview" : "bad");
+  });
+}
+function clearPreview() {
+  $$("#blockBoard .cell").forEach((c) => c.classList.remove("preview", "bad"));
+}
+function placeBlock(r, c) {
+  if (selectedPiece === null) {
+    $("#blockGuide").textContent = "먼저 아래 블록 하나를 골라 주세요!";
+    return;
+  }
+  const p = currentPieces[selectedPiece];
+  if (!fits(p.shape, r, c)) {
+    selectedPiece = null;
+    $("#blockGuide").textContent =
+      "여기에는 놓을 수 없어요. 다른 자리에 다시 끌어 보세요!";
+    renderBlock();
+    return;
+  }
+  p.shape.forEach(([dr, dc]) => (board[r + dr][c + dc] = p.color));
+  p.used = true;
+  blockScore += 100;
+  clearLines();
+  if (board.every((row) => row.every((v) => !v))) {
+    blockScore += 200;
+    $("#blockGuide").textContent = "판을 모두 비웠어요! +200점 ✨";
+  } else $("#blockGuide").textContent = "블록 놓기 성공! +100점";
+  selectedPiece = null;
+  if (blockScore >= 5000 && !blockWon) {
+    blockWon = true;
+    renderBlock();
+    setTimeout(() => cleared("block"), 300);
+    return;
+  }
+  if (currentPieces.every((x) => x.used)) makePieces();
+  renderBlock();
+  if (!hasAnyMove()) {
+    loseBlockLife();
+  }
+}
+function loseBlockLife() {
+  lives--;
+  if (!lives) {
+    renderBlock();
+    setTimeout(
+      () =>
+        failed(
+          "block",
+          `놓을 칸이 없어 목숨을 모두 사용했어요. 최종 점수는 ${blockScore.toLocaleString()}점이에요.`,
+        ),
+      300,
+    );
+    return;
+  }
+  board = Array.from({ length: 8 }, () => Array(8).fill(0));
+  selectedPiece = null;
+  makePieces();
+  renderBlock();
+  $("#blockGuide").textContent =
+    "놓을 칸이 없어 목숨 -1! 점수를 유지하고 새 판으로 시작해요.";
+}
+function clearLines() {
+  const rows = [],
+    cols = [];
+  for (let r = 0; r < 8; r++) if (board[r].every(Boolean)) rows.push(r);
+  for (let c = 0; c < 8; c++) if (board.every((row) => row[c])) cols.push(c);
+  rows.forEach((r) => board[r].fill(0));
+  cols.forEach((c) => board.forEach((row) => (row[c] = 0)));
+}
+function hasAnyMove() {
+  return currentPieces
+    .filter((p) => !p.used)
+    .some((p) => {
+      for (let r = 0; r < 8; r++)
+        for (let c = 0; c < 8; c++) if (fits(p.shape, r, c)) return true;
+      return false;
+    });
+}
+
+// INFINITE STAIRS
+const canvas = $("#stairsCanvas"),
+  ctx = canvas.getContext("2d");
+let stairs, playerStep, facing, stairScore, stairsPlaying;
+function startStairs() {
+  stairs = [0];
+  for (let i = 1; i < 520; i++)
+    stairs.push(stairs[i - 1] + (Math.random() < 0.5 ? -1 : 1));
+  playerStep = 0;
+  facing = 1;
+  stairScore = 0;
+  stairsPlaying = true;
+  $("#stairScore").textContent = 0;
+  drawStairs();
+}
+function stairAction(turn) {
+  if (!stairsPlaying) return;
+  let nextFacing = turn ? -facing : facing;
+  const needed = stairs[playerStep + 1] - stairs[playerStep];
+  if (nextFacing !== needed) {
+    stairsPlaying = false;
+    drawStairs();
+    setTimeout(
+      () => failed("stairs", `${stairScore}계단까지 올라갔어요.`),
+      180,
+    );
+    return;
+  }
+  facing = nextFacing;
+  playerStep++;
+  stairScore++;
+  $("#stairScore").textContent = stairScore;
+  drawStairs();
+  if (stairScore >= 500) {
+    stairsPlaying = false;
+    setTimeout(() => cleared("stairs"), 250);
+  }
+}
+$("#turnBtn").onclick = () => stairAction(true);
+$("#climbBtn").onclick = () => stairAction(false);
+window.addEventListener("keydown", (e) => {
+  if (!$("#stairsGame").classList.contains("active")) return;
+  if (e.key === "ArrowLeft") {
+    e.preventDefault();
+    stairAction(true);
+  }
+  if (e.key === "ArrowRight") {
+    e.preventDefault();
+    stairAction(false);
+  }
+});
+function drawStairs() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const sky = ctx.createLinearGradient(0, 0, 0, 570);
+  sky.addColorStop(0, "#42ade9");
+  sky.addColorStop(0.65, "#ccefff");
+  sky.addColorStop(1, "#e9f4d5");
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, 480, 570);
+  ctx.fillStyle = "#ffffffaa";
+  for (let i = 0; i < 7; i++) {
+    ctx.beginPath();
+    ctx.arc(32 + i * 76, 58 + (i % 2) * 25, 23, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.fillStyle = "#7890a8";
+  for (let i = 0; i < 9; i++) {
+    const h = 75 + (i % 4) * 34;
+    ctx.fillStyle = "#7890a8";
+    ctx.fillRect(i * 58, 390 - h, 48, h);
+    ctx.fillStyle = "#e9f7ff";
+    for (let y = 402 - h; y < 375; y += 22)
+      for (let x = i * 58 + 8; x < i * 58 + 42; x += 17)
+        ctx.fillRect(x, y, 7, 10);
+  }
+  ctx.fillStyle = "#72bf54";
+  ctx.fillRect(0, 390, 480, 180);
+  const baseY = 470,
+    stepY = 54,
+    stepX = 58;
+  const centerX = 240 - stairs[playerStep] * stepX;
+  for (
+    let i = Math.max(0, playerStep - 2);
+    i < Math.min(stairs.length, playerStep + 9);
+    i++
+  ) {
+    const x = centerX + stairs[i] * stepX,
+      y = baseY - (i - playerStep) * stepY;
+    // 입체적인 돌계단: 윗면, 앞면, 옆면을 따로 그린다.
+    ctx.strokeStyle = "#3d4650";
+    ctx.lineWidth = 3;
+    ctx.fillStyle = i === playerStep ? "#d9c76d" : "#aeb5b7";
+    ctx.beginPath();
+    ctx.moveTo(x - 52, y);
+    ctx.lineTo(x + 38, y);
+    ctx.lineTo(x + 52, y + 11);
+    ctx.lineTo(x - 38, y + 11);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = i === playerStep ? "#a89445" : "#747d80";
+    ctx.beginPath();
+    ctx.moveTo(x - 38, y + 11);
+    ctx.lineTo(x + 52, y + 11);
+    ctx.lineTo(x + 52, y + 34);
+    ctx.lineTo(x - 38, y + 34);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.strokeStyle = "#596164";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(x - 20, y + 12);
+    ctx.lineTo(x - 20, y + 33);
+    ctx.moveTo(x + 17, y + 12);
+    ctx.lineTo(x + 17, y + 33);
+    ctx.stroke();
+  }
+  const px = 240,
+    py = baseY - 45;
+  ctx.save();
+  ctx.translate(px, py);
+  ctx.scale(facing, 1);
+  ctx.strokeStyle = "#172038";
+  ctx.lineWidth = 3;
+  // 얼굴과 귀
+  ctx.fillStyle = "#f0b27d";
+  ctx.beginPath();
+  ctx.arc(0, -27, 18, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(-18, -26, 4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  // 머리카락, 눈, 코, 미소
+  ctx.fillStyle = "#2b211c";
+  ctx.beginPath();
+  ctx.arc(-2, -34, 17, Math.PI, 0);
+  ctx.lineTo(15, -32);
+  ctx.lineTo(6, -42);
+  ctx.lineTo(-15, -39);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = "#172038";
+  ctx.beginPath();
+  ctx.arc(7, -28, 2.3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "#8a4d38";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(15, -23);
+  ctx.lineTo(20, -20);
+  ctx.lineTo(14, -18);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(7, -18, 7, 0.15, 1.2);
+  ctx.stroke();
+  // 정장 몸통, 셔츠, 넥타이
+  ctx.strokeStyle = "#172038";
+  ctx.lineWidth = 3;
+  ctx.fillStyle = "#243b67";
+  ctx.beginPath();
+  ctx.roundRect(-19, -8, 38, 43, 6);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = "white";
+  ctx.beginPath();
+  ctx.moveTo(-9, -6);
+  ctx.lineTo(0, 14);
+  ctx.lineTo(9, -6);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = "#dc3d45";
+  ctx.beginPath();
+  ctx.moveTo(0, -2);
+  ctx.lineTo(-4, 17);
+  ctx.lineTo(0, 24);
+  ctx.lineTo(4, 17);
+  ctx.closePath();
+  ctx.fill();
+  // 걷는 팔과 다리, 구두
+  ctx.strokeStyle = "#243b67";
+  ctx.lineWidth = 9;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(-16, 1);
+  ctx.lineTo(-29, 15);
+  ctx.moveTo(16, 2);
+  ctx.lineTo(29, -6);
+  ctx.stroke();
+  ctx.strokeStyle = "#1c2947";
+  ctx.lineWidth = 10;
+  ctx.beginPath();
+  ctx.moveTo(-9, 32);
+  ctx.lineTo(-17, 49);
+  ctx.moveTo(9, 32);
+  ctx.lineTo(20, 45);
+  ctx.stroke();
+  ctx.strokeStyle = "#191919";
+  ctx.lineWidth = 6;
+  ctx.beginPath();
+  ctx.moveTo(-18, 49);
+  ctx.lineTo(-28, 49);
+  ctx.moveTo(20, 45);
+  ctx.lineTo(29, 45);
+  ctx.stroke();
+  ctx.lineCap = "butt";
+  ctx.restore();
+  ctx.fillStyle = "#18213b";
+  ctx.font = "900 16px Noto Sans KR";
+  ctx.textAlign = "center";
+  ctx.fillText(facing === 1 ? "오른쪽 보는 중 →" : "← 왼쪽 보는 중", 240, 535);
+}
+function roundRect(x, y, w, h, r, fill, stroke) {
+  ctx.beginPath();
+  ctx.roundRect(x, y, w, h, r);
+  if (fill) ctx.fill();
+  if (stroke) ctx.stroke();
+}
+
+startBlock();
+startStairs();
+show("home");
