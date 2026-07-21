@@ -116,17 +116,56 @@ $$("[data-rank]").forEach(
   (b) => (b.onclick = () => showRanking(b.dataset.rank)),
 );
 
-function ranks(game) {
-  return JSON.parse(localStorage.getItem("schoolRanks_" + game) || "[]");
+const SUPABASE_URL = "https://gtgjaipolrtvfoxdiegd.supabase.co";
+const SUPABASE_KEY = "sb_publishable_HEVrPhA8eU-UATAmAvfJ8A_Se4Anoq9";
+const SUPABASE_HEADERS = {
+  apikey: SUPABASE_KEY,
+  Authorization: `Bearer ${SUPABASE_KEY}`,
+};
+async function fetchRanks(game) {
+  const response = await fetch(
+    `${SUPABASE_URL}/rest/v1/rankings?game=eq.${encodeURIComponent(game)}&select=name&order=created_at.asc`,
+    { headers: SUPABASE_HEADERS },
+  );
+  if (!response.ok) throw new Error("rank fetch failed");
+  const rows = await response.json();
+  return rows.map((row) => row.name);
 }
-function showRanking(game) {
-  const names = ranks(game);
-  openModal(
+async function saveRank(game, name) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/rankings`, {
+    method: "POST",
+    headers: {
+      ...SUPABASE_HEADERS,
+      "Content-Type": "application/json",
+      Prefer: "return=minimal",
+    },
+    body: JSON.stringify({ game, name }),
+  });
+  if (!response.ok) throw new Error("rank save failed");
+}
+async function showRanking(game) {
+  const title =
     game === "block"
       ? tone("블록 블라스트 깬 사람", "블록 블라스트 클리어 기록")
       : game === "stairs"
         ? tone("무한의 계단 깬 사람", "무한의 계단 클리어 기록")
-        : tone("세트 둘 다 깬 사람", "두 게임 세트 클리어 기록"),
+        : tone("세트 둘 다 깬 사람", "두 게임 세트 클리어 기록");
+  openModal(
+    title,
+    `<p>${tone("랭킹 불러오는 중", "랭킹을 불러오는 중입니다.")}</p>`,
+  );
+  let names;
+  try {
+    names = await fetchRanks(game);
+  } catch {
+    openModal(
+      title,
+      `<p>${tone("랭킹 연결 실패 잠시 뒤 다시 해봐", "랭킹을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.")}</p>`,
+    );
+    return;
+  }
+  openModal(
+    title,
     names.length
       ? `<ol class="rank-list">${names.map((n, i) => `<li>${teacherMode ? `${i + 1}.` : `${i + 1}등`} ${safe(n)}</li>`).join("")}</ol>`
       : tone(
@@ -155,13 +194,19 @@ function cleared(game) {
     `<div class="confetti">🏆</div><p>${tone("랭킹에 이름 남겨봐", "축하합니다. 랭킹에 이름을 남겨 보세요.")}</p><form class="name-form" id="nameForm"><input id="winnerName" maxlength="10" required placeholder="이름"><button>${tone("등록", "등록하기")}</button></form>`,
   );
   setTimeout(() => {
-    $("#nameForm").onsubmit = (e) => {
+    $("#nameForm").onsubmit = async (e) => {
       e.preventDefault();
       const name = $("#winnerName").value.trim();
       if (!name) return;
-      const list = ranks(game);
-      list.push(name);
-      localStorage.setItem("schoolRanks_" + game, JSON.stringify(list));
+      try {
+        await saveRank(game, name);
+      } catch {
+        openModal(
+          "랭킹 오류",
+          `<p>${tone("이름 저장 실패 잠시 뒤 다시 해봐", "이름을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.")}</p>`,
+        );
+        return;
+      }
       showRanking(game);
     };
   }, 0);
@@ -232,13 +277,19 @@ function showSetResult(stairSuccess, message = "") {
   );
   setTimeout(() => {
     if (bothSuccess) {
-      $("#setNameForm").onsubmit = (e) => {
+      $("#setNameForm").onsubmit = async (e) => {
         e.preventDefault();
         const name = $("#setWinnerName").value.trim();
         if (!name) return;
-        const list = ranks("set");
-        list.push(name);
-        localStorage.setItem("schoolRanks_set", JSON.stringify(list));
+        try {
+          await saveRank("set", name);
+        } catch {
+          openModal(
+            "랭킹 오류",
+            `<p>${tone("이름 저장 실패 잠시 뒤 다시 해봐", "이름을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.")}</p>`,
+          );
+          return;
+        }
         setActive = false;
         showRanking("set");
       };
@@ -398,14 +449,14 @@ function beginDrag(e, i, cols) {
   const move = (ev) => {
     ghost.style.left = ev.clientX + "px";
     ghost.style.top = ev.clientY + "px";
-    dragPreview(ev.clientX, ev.clientY);
+    dragPreview(ev.clientX, ev.clientY, maxR, maxC);
   };
   const up = (ev) => {
     window.removeEventListener("pointermove", move);
     window.removeEventListener("pointerup", up);
     ghost.remove();
     clearPreview();
-    const pos = dragCell(ev.clientX, ev.clientY);
+    const pos = dragCell(ev.clientX, ev.clientY, maxR, maxC);
     if (pos) placeBlock(pos.r, pos.c);
     else {
       $("#blockGuide").textContent = tone(
@@ -420,24 +471,37 @@ function beginDrag(e, i, cols) {
   window.addEventListener("pointermove", move);
   window.addEventListener("pointerup", up);
 }
-function dragCell(x, y) {
+function dragCell(x, y, maxR = 0, maxC = 0) {
   const rect = $("#blockBoard").getBoundingClientRect();
   if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom)
     return null;
-  const size = rect.width / 8;
+  const cells = $("#blockBoard").children;
+  if (!cells.length) return null;
+  const first = cells[0].getBoundingClientRect();
+  const second = cells[1].getBoundingClientRect();
+  const below = cells[8].getBoundingClientRect();
+  const pitchX = second.left - first.left;
+  const pitchY = below.top - first.top;
+  const firstCenterX = first.left + first.width / 2;
+  const firstCenterY = first.top + first.height / 2;
   return {
-    r: Math.max(0, Math.min(7, Math.floor((y - rect.top) / size))),
-    c: Math.max(0, Math.min(7, Math.floor((x - rect.left) / size))),
+    r: Math.round((y - firstCenterY) / pitchY - maxR / 2),
+    c: Math.round((x - firstCenterX) / pitchX - maxC / 2),
   };
 }
-function dragPreview(x, y) {
+function dragPreview(x, y, maxR = 0, maxC = 0) {
   clearPreview();
-  const pos = dragCell(x, y);
+  const pos = dragCell(x, y, maxR, maxC);
   if (pos) preview(pos.r, pos.c);
 }
 function fits(shape, r, c) {
   return shape.every(
-    ([dr, dc]) => r + dr < 8 && c + dc < 8 && !board[r + dr][c + dc],
+    ([dr, dc]) =>
+      r + dr >= 0 &&
+      c + dc >= 0 &&
+      r + dr < 8 &&
+      c + dc < 8 &&
+      !board[r + dr][c + dc],
   );
 }
 function preview(r, c) {
@@ -445,7 +509,12 @@ function preview(r, c) {
   const p = currentPieces[selectedPiece];
   const ok = fits(p.shape, r, c);
   p.shape.forEach(([dr, dc]) => {
-    const cell = $("#blockBoard").children[(r + dr) * 8 + c + dc];
+    const rr = r + dr;
+    const cc = c + dc;
+    const cell =
+      rr >= 0 && cc >= 0 && rr < 8 && cc < 8
+        ? $("#blockBoard").children[rr * 8 + cc]
+        : null;
     if (cell) cell.classList.add(ok ? "preview" : "bad");
   });
 }
