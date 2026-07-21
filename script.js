@@ -355,8 +355,10 @@ const canvas = $("#stairsCanvas"),
   ctx = canvas.getContext("2d");
 let stairs, playerStep, facing, stairScore, stairsPlaying;
 function startStairs() {
-  stairs = [0];
-  for (let i = 1; i < 520; i++)
+  // 첫 계단은 캐릭터가 처음 바라보는 오른쪽에 고정한다.
+  // 따라서 게임 시작 직후에는 방향 전환 없이 바로 올라갈 수 있다.
+  stairs = [0, 1];
+  for (let i = 2; i < 520; i++)
     stairs.push(stairs[i - 1] + (Math.random() < 0.5 ? -1 : 1));
   playerStep = 0;
   facing = 1;
