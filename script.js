@@ -40,8 +40,8 @@ function applyMode() {
   );
   $("#setCardTitle").textContent = tone("두 게임 세트", "두 게임 세트");
   $("#setCardText").textContent = tone(
-    "블록 먼저 하고 무계까지 도전",
-    "블록 블라스트를 먼저 진행한 후 무한의 계단에 도전합니다",
+    "원래 룰 그대로 블록 먼저 하고 무계까지 도전",
+    "각 게임의 기존 규칙대로 블록 블라스트 진행 후 무한의 계단에 도전합니다",
   );
   $("#setPrice").innerHTML = tone(
     "세트 1200원<br><b>둘 다 깨면 1000원</b>",
@@ -120,7 +120,9 @@ function showRanking(game) {
   openModal(
     game === "block"
       ? tone("블록 블라스트 깬 사람", "블록 블라스트 클리어 기록")
-      : tone("무한의 계단 깬 사람", "무한의 계단 클리어 기록"),
+      : game === "stairs"
+        ? tone("무한의 계단 깬 사람", "무한의 계단 클리어 기록")
+        : tone("세트 둘 다 깬 사람", "두 게임 세트 클리어 기록"),
     names.length
       ? `<ol class="rank-list">${names.map((n, i) => `<li>${teacherMode ? `${i + 1}.` : `${i + 1}등`} ${safe(n)}</li>`).join("")}</ol>`
       : tone(
@@ -217,15 +219,31 @@ function showSetResult(stairSuccess, message = "") {
       ? "두 게임을 모두 클리어하여 1,200원에서 1,000원으로 할인됩니다."
       : "두 게임 중 하나 이상을 클리어하지 못해 세트 이용료는 1,200원입니다.",
   );
+  const resultAction = bothSuccess
+    ? `<p>${tone("세트 랭킹에 이름 남겨봐", "세트 랭킹에 이름을 남겨 주세요.")}</p><form class="name-form" id="setNameForm"><input id="setWinnerName" maxlength="10" required placeholder="이름"><button>${tone("등록", "등록하기")}</button></form>`
+    : `<div class="result-actions"><button id="finishSet">${tone("선택 화면", "게임 선택 화면")}</button></div>`;
   openModal(
     title,
-    `${message ? `<p>${message}</p>` : ""}<div class="confetti">${bothSuccess ? "🏆" : "🎮"}</div><p><b>${priceText}</b></p><div class="result-actions"><button id="finishSet">${tone("선택 화면", "게임 선택 화면")}</button></div>`,
+    `${message ? `<p>${message}</p>` : ""}<div class="confetti">${bothSuccess ? "🏆" : "🎮"}</div><p><b>${priceText}</b></p>${resultAction}`,
   );
   setTimeout(() => {
-    $("#finishSet").onclick = () => {
-      setActive = false;
-      show("home");
-    };
+    if (bothSuccess) {
+      $("#setNameForm").onsubmit = (e) => {
+        e.preventDefault();
+        const name = $("#setWinnerName").value.trim();
+        if (!name) return;
+        const list = ranks("set");
+        list.push(name);
+        localStorage.setItem("schoolRanks_set", JSON.stringify(list));
+        setActive = false;
+        showRanking("set");
+      };
+    } else {
+      $("#finishSet").onclick = () => {
+        setActive = false;
+        show("home");
+      };
+    }
   }, 0);
 }
 window.addEventListener("keydown", (e) => {
